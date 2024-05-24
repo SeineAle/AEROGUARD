@@ -3,18 +3,29 @@ import * as THREE from 'https://cdn.skypack.dev/three@0.129.0/build/three.module
 import { OrbitControls } from 'https://cdn.skypack.dev/three@0.129.0/examples/jsm/controls/OrbitControls.js';
 import { GLTFLoader } from 'https://cdn.skypack.dev/three@0.129.0/examples/jsm/loaders/GLTFLoader.js';
 import { TransformControls } from 'https://cdn.skypack.dev/three@0.129.0/examples/jsm/controls/TransformControls.js';
-
+import data from './data';
 const parseGltf = (gltf) => {
     const graph = { nodes: [], edges: [] };
-
+    const proximityThreshold = 0.25; 
     gltf.scene.traverse((node) => {
         if (node.isMesh) {
             const position = new THREE.Vector3();
             node.getWorldPosition(position);
-            graph.nodes.push({
-                id: node.uuid,
-                position: position.clone(),
-            });
+            const id = ((position.x).toString() + (position.y).toString() + (position.z).toString());
+            let isClose = false;
+            for (const existingNode of graph.nodes) {
+                if (position.distanceTo(existingNode.position) < proximityThreshold) {
+                    isClose = true;
+                    break;
+                }
+            }
+            if (!isClose) {
+                graph.nodes.push({
+                    id: node.uuid,
+                    position: position.clone(),
+                    info_id : id
+                });
+            }
         }
     });
 
@@ -25,11 +36,7 @@ const ModelViewer = () => {
     const [graph, setGraph] = useState(null);
     const [model, setModel] = useState(null);
     const [selectedNode, setSelectedNode] = useState(null);
-    const [nodeInfo] = useState({
-        'node1': "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
-        'node2': "Integer nec odio. Praesent libero. Sed cursus ante dapibus diam.",
-        'node3': "Sed nisi. Nulla quis sem at nibh elementum imperdiet.",
-    });
+    const [nodeInfo] = useState(data);
 
     useEffect(() => {
         const loader = new GLTFLoader();
@@ -92,7 +99,9 @@ const ModelViewer = () => {
                 const material = new THREE.MeshBasicMaterial({ color: 0xffff00 });
                 const sphere = new THREE.Mesh(geometry, material);
                 sphere.position.copy(node.position);
-                sphere.userData = { id: node.id };
+                sphere.userData = { id: node.id,
+                    info_id : node.info_id,
+                };
                 spheres.push(sphere);
                 group.add(sphere);
             }
@@ -119,7 +128,7 @@ const ModelViewer = () => {
                     });
                     selectedSphere.material.color.set(0xff0000); // Change color to red
                     selectedSphere.scale.set(1.5, 1.5, 1.5); // Increase size
-                    setSelectedNode(selectedSphere.userData.id); // Set selected node id
+                    setSelectedNode(selectedSphere.userData.info_id); // Set selected node id
                 }
             };
 
@@ -147,8 +156,8 @@ const ModelViewer = () => {
         <div>
             {selectedNode && (
                 <div style={{ position: 'absolute', top: '10px', right: '10px', backgroundColor: 'white', padding: '10px', border: '1px solid black' }}>
-                    <h3>Node Information</h3>
-                    <p>{nodeInfo[selectedNode] || `Node ID: ${selectedNode}`}</p>
+                    <h3>{data[selectedNode].title }</h3>
+                    <p>{data[selectedNode].data }</p>
                 </div>
             )}
         </div>

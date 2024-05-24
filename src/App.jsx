@@ -1,5 +1,5 @@
 import React from 'react';
-import ModelViewer from './components/ShortestPath2';
+import ModelViewer from './components/StressPoints';
 // import './App.css'
 
 function App() {
