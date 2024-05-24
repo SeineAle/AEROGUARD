@@ -2,35 +2,51 @@ import React, { useEffect, useState } from 'react';
 import * as THREE from 'https://cdn.skypack.dev/three@0.129.0/build/three.module.js';
 import { OrbitControls } from 'https://cdn.skypack.dev/three@0.129.0/examples/jsm/controls/OrbitControls.js';
 import { GLTFLoader } from 'https://cdn.skypack.dev/three@0.129.0/examples/jsm/loaders/GLTFLoader.js';
+import { Line2 } from 'https://cdn.skypack.dev/three@0.129.0/examples/jsm/lines/Line2.js';
+import { LineGeometry } from 'https://cdn.skypack.dev/three@0.129.0/examples/jsm/lines/LineGeometry.js';
+import { LineMaterial } from 'https://cdn.skypack.dev/three@0.129.0/examples/jsm/lines/LineMaterial.js';
 
 const parseGltf = (gltf) => {
     const graph = { nodes: [], edges: [] };
+    const proximityThreshold = 0.25;  // Define your proximity threshold here
 
     gltf.scene.traverse((node) => {
         if (node.isMesh) {
             const position = new THREE.Vector3();
             node.getWorldPosition(position);
-            graph.nodes.push({
-                id: node.uuid,
-                position: position.clone(),
-            });
+
+            // Check if there's an existing node within the proximity threshold
+            let isClose = false;
+            for (const existingNode of graph.nodes) {
+                if (position.distanceTo(existingNode.position) < proximityThreshold) {
+                    isClose = true;
+                    break;
+                }
+            }
+
+            // Only add the node if no existing node is within the threshold
+            if (!isClose) {
+                graph.nodes.push({
+                    id: node.uuid,
+                    position: position.clone(),
+                });
+            }
         }
     });
+    console.log(graph.nodes.length);
 
     // Create edges by connecting each node to the next one
     for (let i = 0; i < graph.nodes.length - 1; i++) {
-        for(let j = 0; j < 1; j ++){
-            let k = Math.floor(((Math.random())*10000)%(graph.nodes.length))
-            console.log(k);
+        for (let j = 0; j < 2; j++) {
+            let k = Math.floor(((Math.random()) * 10000) % (graph.nodes.length));
             graph.edges.push({
-                i : i,
-                j : k,
+                i: i,
+                j: k,
                 start: graph.nodes[i].position,
                 end: graph.nodes[k].position,
             });
         }
     }
-    
     
     return graph;
 };
@@ -39,8 +55,9 @@ const pathfinder = (graph) => {
     const nodes = graph.nodes;
     const edges = graph.edges;
     const nodeCount = nodes.length;
-    const adjacencyMatrix = Array(nodeCount).fill().map(() => Array(nodeCount).fill(Infinity))
-    for(const edge of edges){
+    console.log(nodeCount)
+    const adjacencyMatrix = Array(nodeCount).fill().map(() => Array(nodeCount).fill(Infinity));
+    for (const edge of edges) {
         const i = edge.i;
         const j = edge.j;
         const distance = nodes[i].position.distanceTo(nodes[j].position);
@@ -52,6 +69,9 @@ const pathfinder = (graph) => {
         const distances = Array(nodeCount).fill(Infinity);
         const previous = Array(nodeCount).fill(null);
         const visited = Array(nodeCount).fill(false);
+        console.log(distances);
+        console.log(previous);
+        console.log(visited);
         distances[start] = 0;
 
         for (let i = 0; i < nodeCount; i++) {
@@ -73,16 +93,26 @@ const pathfinder = (graph) => {
                 }
             }
         }
-
+        console.log(distances);
+        console.log(previous);
+        console.log(visited);
+        let end_ = start;
+        for(let k = nodeCount-1; k > 0; k --){
+            if(visited[k]==true){
+                end_ = k;
+                break;
+            }
+        }
         const path = [];
-        for (let at = end; at !== null; at = previous[at]) {
+        for (let at = end_; at !== null; at = previous[at]) {
             path.push(at);
         }
         path.reverse();
         return path;
     };
+
     const startNode = 5;
-    const endNode = 200;
+    const endNode = nodeCount-1;
     const shortestPath = dijkstra(startNode, endNode);
     return shortestPath;
 }
@@ -141,8 +171,8 @@ const ModelViewer = () => {
 
             // Add spheres to the scene
             for (const node of graph.nodes) {
-                const geometry = new THREE.SphereGeometry(0.02, 32, 32);  // Use sphereRadius variable here
-                const material = new THREE.MeshBasicMaterial({ color: 0xffff00 });
+                const geometry = new THREE.SphereGeometry(0.02, 32, 32); // Use sphereRadius variable here
+                const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
                 const sphere = new THREE.Mesh(geometry, material);
                 sphere.position.copy(node.position);
                 scene.add(sphere);
@@ -151,18 +181,29 @@ const ModelViewer = () => {
             // Add edges to the scene
             for (const edge of graph.edges) {
                 const geometry = new THREE.BufferGeometry().setFromPoints([edge.start, edge.end]);
-                const material = new THREE.LineBasicMaterial({ color: 0xff00ff });
+                const material = new THREE.LineBasicMaterial({ color: 0x0000ff });
                 const line = new THREE.Line(geometry, material);
                 scene.add(line);
             }
 
+            // Add the shortest path with Line2
             for (let i = 0; i < path.length - 1; i++) {
-                const material = new THREE.LineBasicMaterial({ color: 0xff0000 });
-                const geometry = new THREE.BufferGeometry().setFromPoints([
-                    graph.nodes[path[i]].position,
-                    graph.nodes[path[i + 1]].position
-                ]);
-                const line = new THREE.Line(geometry, material);
+                const start = graph.nodes[path[i]].position;
+                const end = graph.nodes[path[i + 1]].position;
+
+                const positions = [];
+                positions.push(start.x, start.y, start.z);
+                positions.push(end.x, end.y, end.z);
+
+                const lineGeometry = new LineGeometry();
+                lineGeometry.setPositions(positions);
+
+                const lineMaterial = new LineMaterial({
+                    color: 0xff0000,
+                    linewidth: 0.005, // Adjust this value for thickness
+                });
+
+                const line = new Line2(lineGeometry, lineMaterial);
                 scene.add(line);
             }
     
@@ -170,7 +211,7 @@ const ModelViewer = () => {
     
             const animate = () => {
                 requestAnimationFrame(animate);
-                controls.update();  // Update controls
+                controls.update(); // Update controls
                 renderer.render(scene, camera);
             };
     
