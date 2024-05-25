@@ -1,6 +1,6 @@
 import React from 'react';
 import ModelViewer from './components/StressPoints';
-// import './App.css'
+import './App.css'
 
 function App() {
   return (

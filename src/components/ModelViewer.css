@@ -1,0 +1,40 @@
+/* Main container styling */
+.ModelViewer-container {
+    position: relative;
+    width: 100%;
+    height: 100vh;
+    overflow: hidden;
+}
+
+/* Style for the 3D canvas */
+.ModelViewer-canvas {
+    width: 100%;
+    height: 100%;
+}
+
+/* Loader styling */
+.Loader {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+/* Info panel styling */
+.InfoPanel {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background-color: rgba(255, 255, 255, 0.9);
+    padding: 10px;
+    border: 1px solid #000;
+    max-width: 300px;
+}
+
+.InfoPanel h3 {
+    margin-top: 0;
+}
+
+.InfoPanel p {
+    margin-bottom: 0;
+}
